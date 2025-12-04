@@ -1,0 +1,5 @@
+{
+  "name": "Legal Library Offline",
+  "description": "An offline-first, mobile-optimized reader for Indian legal bare acts including IPC, CPC, and the Constitution.",
+  "requestFramePermissions": []
+}
