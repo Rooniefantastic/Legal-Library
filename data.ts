@@ -3,7 +3,8 @@ import { ipc } from './acts/ipc';
 import { constitution } from './acts/constitution';
 import { bns } from './acts/bns';
 import { simpleEdict } from './acts/simple_edict';
-
+import {carriageOfGoodsBySeaAct2025} from './acts/carriage-goods';
+import {theCoastingvesselsAct1838} from './acts/coasting-vessels-act';
 /**
  * Act Directory
  * 
@@ -15,5 +16,7 @@ export const acts: Act[] = [
   ipc,
   constitution,
   bns,
-  simpleEdict
+  simpleEdict,
+  carriageOfGoodsBySeaAct2025,
+  theCoastingvesselsAct1838
 ];
