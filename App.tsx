@@ -20,11 +20,123 @@ import {
   Home,
   Footprints
 } from 'lucide-react';
+import { Share } from '@capacitor/share';
 import { acts } from './data';
 import { flattenActSections } from './utils';
 import { Act, Chapter, Schedule, Section } from './types';
 
-// --- Components ---
+// Bookmark Management Utilities
+const BOOKMARKS_STORAGE_KEY = 'legal_library_bookmarks';
+
+interface BookmarkRecord {
+  actIndex: number;
+  sectionNumber: string;
+  timestamp: number;
+}
+
+const loadBookmarks = (): BookmarkRecord[] => {
+  try {
+    const stored = localStorage.getItem(BOOKMARKS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveBookmarks = (bookmarks: BookmarkRecord[]) => {
+  try {
+    localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(bookmarks));
+  } catch (err) {
+    console.error('Failed to save bookmarks:', err);
+  }
+};
+
+const addBookmark = (actIndex: number, sectionNumber: string) => {
+  const bookmarks = loadBookmarks();
+  const exists = bookmarks.some(b => b.actIndex === actIndex && b.sectionNumber === sectionNumber);
+  if (!exists) {
+    bookmarks.push({ actIndex, sectionNumber, timestamp: Date.now() });
+    saveBookmarks(bookmarks);
+  }
+};
+
+const removeBookmark = (actIndex: number, sectionNumber: string) => {
+  const bookmarks = loadBookmarks();
+  const filtered = bookmarks.filter(b => !(b.actIndex === actIndex && b.sectionNumber === sectionNumber));
+  saveBookmarks(filtered);
+};
+
+const isBookmarked = (actIndex: number, sectionNumber: string): boolean => {
+  const bookmarks = loadBookmarks();
+  return bookmarks.some(b => b.actIndex === actIndex && b.sectionNumber === sectionNumber);
+};
+
+// Disclaimer Management Utilities
+const DISCLAIMER_ACCEPTED_KEY = 'legal_library_disclaimer_accepted';
+
+const hasAcceptedDisclaimer = (): boolean => {
+  try {
+    return localStorage.getItem(DISCLAIMER_ACCEPTED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+};
+
+const acceptDisclaimer = () => {
+  try {
+    localStorage.setItem(DISCLAIMER_ACCEPTED_KEY, 'true');
+  } catch (err) {
+    console.error('Failed to save disclaimer acceptance:', err);
+  }
+};
+
+// 0. Disclaimer Modal
+const DisclaimerModal: React.FC<{ onAccept: () => void }> = ({ onAccept }) => {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 space-y-4">
+          <h1 className="text-2xl font-bold text-gray-900">Important Disclaimer</h1>
+          
+          <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
+            <p className="font-semibold text-amber-700 bg-amber-50 p-3 rounded">
+              ⚠️ Please read carefully before using this application
+            </p>
+            
+            <div className="space-y-2">
+              <p>
+                <strong>AI-Generated Content:</strong> Some content in this application has been created using artificial intelligence (AI) and may contain inaccuracies, errors, or outdated information.
+              </p>
+              
+              <p>
+                <strong>Not a Substitute for Legal Advice:</strong> This application is for informational purposes only and should not be relied upon as a substitute for professional legal advice. The legal texts and interpretations provided may not be accurate or current.
+              </p>
+              
+              <p>
+                <strong>Always Verify:</strong> You must independently verify all information using official legal sources before relying on any content for legal decisions or actions.
+              </p>
+              
+              <p>
+                <strong>Consult a Lawyer:</strong> For any legal matters, you should consult with a qualified legal professional who can provide advice specific to your situation.
+              </p>
+              
+              <p>
+                <strong>No Warranty:</strong> This app is provided "as-is" without any warranty. The creators are not responsible for any errors, damages, or consequences arising from the use of this application.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onAccept}
+            className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition-colors mt-6"
+          >
+            I Understand and Accept
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // 1. Home Screen
 const HomeScreen: React.FC = () => {
@@ -291,7 +403,7 @@ const SectionViewScreen: React.FC = () => {
   // Font Size State
   const [fontSize, setFontSize] = useState<'sm' | 'base' | 'lg' | 'xl'>('base');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
 
   // Derive Data
   const flatSections = useMemo(() => act ? flattenActSections(act, actIndex) : [], [act, actIndex]);
@@ -300,6 +412,13 @@ const SectionViewScreen: React.FC = () => {
   );
   
   const currentItem = flatSections[currentIndex];
+
+  // Initialize bookmark state on mount and when section changes
+  useEffect(() => {
+    if (currentItem) {
+      setBookmarked(isBookmarked(actIndex, currentItem.section.section_number));
+    }
+  }, [actIndex, currentItem?.section.section_number]);
 
   useEffect(() => {
     // Reset scroll on navigation
@@ -325,20 +444,44 @@ const SectionViewScreen: React.FC = () => {
     }
   };
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: `${act.act_name} - Section ${section.section_number}`,
-        text: section.text
-      }).catch(console.error);
-    } else {
-      alert("Sharing not supported on this browser.");
+  const handleShare = async () => {
+    try {
+      const title = `${act.act_name} - Section ${section.section_number}`;
+      const text = section.text;
+      
+      // Try to use Capacitor Share API (works on Android, iOS, and web with native support)
+      await Share.share({
+        title: title,
+        text: text,
+        dialogTitle: 'Share Section',
+      });
+    } catch (err: any) {
+      // If share fails or is cancelled, fall back to copy to clipboard
+      if (err?.message !== 'Share canceled.') {
+        try {
+          await navigator.clipboard.writeText(
+            `${act.act_name} - Section ${section.section_number}\n\n${section.text}`
+          );
+          alert("Copied to clipboard! (Share not available)");
+        } catch {
+          alert("Unable to share or copy content.");
+        }
+      }
     }
   };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(section.text);
     alert("Copied to clipboard!");
+  };
+
+  const handleBookmark = () => {
+    if (bookmarked) {
+      removeBookmark(actIndex, section.section_number);
+    } else {
+      addBookmark(actIndex, section.section_number);
+    }
+    setBookmarked(!bookmarked);
   };
 
   // Text Formatter with Footnote Handling
@@ -412,8 +555,8 @@ const SectionViewScreen: React.FC = () => {
            <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className="p-2 hover:bg-gray-100 rounded-full">
              <Type className="w-5 h-5 text-gray-600" />
            </button>
-           <button onClick={() => setIsBookmarked(!isBookmarked)} className="p-2 hover:bg-gray-100 rounded-full">
-             <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-yellow-400 text-yellow-400' : 'text-gray-600'}`} />
+           <button onClick={handleBookmark} className="p-2 hover:bg-gray-100 rounded-full">
+             <Bookmark className={`w-5 h-5 ${bookmarked ? 'fill-yellow-400 text-yellow-400' : 'text-gray-600'}`} />
            </button>
            <button onClick={handleCopy} className="p-2 hover:bg-gray-100 rounded-full">
              <Copy className="w-5 h-5 text-gray-600" />
@@ -467,12 +610,27 @@ const SectionViewScreen: React.FC = () => {
         {/* Annotations / Explanations */}
         {section.annotations && section.annotations.length > 0 && (
             <div className="mt-8 pt-6 border-t border-gray-200">
-                <h4 className="font-bold text-gray-800 mb-3 text-lg">Footnotes</h4>
+                <h4 className="font-bold text-gray-800 mb-3 text-lg">Annotations</h4>
                 <ul className="space-y-3 text-sm text-gray-700">
                     {section.annotations.map(a => (
                         <li key={a.id} className="leading-relaxed border-b border-gray-100 pb-2 last:border-0">
                           <span className="font-bold text-blue-600 mr-2">[{a.id}]</span> 
                           {a.detail}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        )}
+        
+        {/* Footnotes */}
+        {section.footnotes && section.footnotes.length > 0 && (
+            <div className="mt-8 pt-6 border-t border-gray-200">
+                <h4 className="font-bold text-gray-800 mb-3 text-lg">Footnotes</h4>
+                <ul className="space-y-3 text-sm text-gray-700">
+                    {section.footnotes.map((fn, idx) => (
+                        <li key={idx} className="leading-relaxed border-b border-gray-100 pb-2 last:border-0">
+                          <span className="font-bold text-blue-600 mr-2">{fn.fn_number || idx + 1}.</span> 
+                          {fn.text}
                         </li>
                     ))}
                 </ul>
@@ -520,6 +678,17 @@ const SectionViewScreen: React.FC = () => {
 // --- Main App Shell ---
 
 const App: React.FC = () => {
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(hasAcceptedDisclaimer());
+
+  const handleDisclaimerAccept = () => {
+    acceptDisclaimer();
+    setDisclaimerAccepted(true);
+  };
+
+  if (!disclaimerAccepted) {
+    return <DisclaimerModal onAccept={handleDisclaimerAccept} />;
+  }
+
   return (
     <HashRouter>
       <Routes>
