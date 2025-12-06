@@ -333,11 +333,11 @@ const BookmarksScreen: React.FC = () => {
                 return (
                   <div
                     key={`${bookmark.actIndex}-${bookmark.sectionNumber}-${idx}`}
-                    className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm"
+                    className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex items-center justify-between gap-4"
                   >
                     <Link
                       to={`/act/${bookmark.actIndex}/section/${encodeURIComponent(section.section_number)}`}
-                      className="block mb-2"
+                      className="flex-1 block"
                     >
                       <div className="text-xs text-blue-600 font-medium mb-1">{act.act_name}</div>
                       <div className="font-semibold text-gray-800 hover:text-blue-600 transition-colors">
@@ -345,17 +345,12 @@ const BookmarksScreen: React.FC = () => {
                         {section.section_title && ` - ${section.section_title}`}
                       </div>
                     </Link>
-                    <div className="flex justify-between items-center mt-2">
-                      <p className="text-xs text-gray-500">
-                        {new Date(bookmark.timestamp).toLocaleDateString()}
-                      </p>
-                      <button
-                        onClick={() => removeBookmarkItem(bookmark.actIndex, bookmark.sectionNumber)}
-                        className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded hover:bg-red-100 transition-colors"
-                      >
-                        Remove
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => removeBookmarkItem(bookmark.actIndex, bookmark.sectionNumber)}
+                      className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded hover:bg-red-100 transition-colors flex-shrink-0"
+                    >
+                      Remove
+                    </button>
                   </div>
                 );
               })}
@@ -758,7 +753,6 @@ const SectionViewScreen: React.FC = () => {
         {/* Footnotes */}
         {section.footnotes && section.footnotes.length > 0 && (
             <div className="mt-8 pt-6 border-t border-gray-200">
-                <h4 className="font-bold text-gray-800 mb-3 text-lg">Footnotes</h4>
                 <ul className="space-y-3 text-sm text-gray-700">
                     {section.footnotes.map((fn, idx) => (
                         <li key={idx} className="leading-relaxed border-b border-gray-100 pb-2 last:border-0">
