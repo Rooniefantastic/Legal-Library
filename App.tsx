@@ -20,10 +20,18 @@ import {
   Home,
   Footprints
 } from 'lucide-react';
-import { Share } from '@capacitor/share';
 import { acts } from './data';
 import { flattenActSections } from './utils';
 import { Act, Chapter, Schedule, Section } from './types';
+
+// Dynamic import for Capacitor Share (only available on native)
+let CapacitorShare: any = null;
+try {
+  const { Share } = require('@capacitor/share');
+  CapacitorShare = Share;
+} catch {
+  // Capacitor not available in this environment
+}
 
 // Bookmark Management Utilities
 const BOOKMARKS_STORAGE_KEY = 'legal_library_bookmarks';
@@ -450,14 +458,25 @@ const SectionViewScreen: React.FC = () => {
       const text = section.text;
       
       // Try to use Capacitor Share API (works on Android, iOS, and web with native support)
-      await Share.share({
-        title: title,
-        text: text,
-        dialogTitle: 'Share Section',
-      });
+      if (CapacitorShare) {
+        await CapacitorShare.share({
+          title: title,
+          text: text,
+          dialogTitle: 'Share Section',
+        });
+      } else if (navigator.share) {
+        // Fallback to Web Share API
+        await navigator.share({
+          title: title,
+          text: text,
+        });
+      } else {
+        // Fallback to clipboard
+        throw new Error('No share API available');
+      }
     } catch (err: any) {
       // If share fails or is cancelled, fall back to copy to clipboard
-      if (err?.message !== 'Share canceled.') {
+      if (err?.message !== 'Share canceled.' && !err?.message?.includes('aborted')) {
         try {
           await navigator.clipboard.writeText(
             `${act.act_name} - Section ${section.section_number}\n\n${section.text}`
