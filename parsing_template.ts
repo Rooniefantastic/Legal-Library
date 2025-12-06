@@ -2,97 +2,124 @@ import { Act } from './types';
 
 /**
  * --- INSTRUCTIONS FOR AI PARSER ---
- * 
+ *
  * Objective: Convert raw legal text (from PDF/OCR) into the structured TypeScript format defined below.
- * 
+ *
  * Rules:
- * 1. Output must be a valid TypeScript object of type 'Act'.
- * 2. Maintain exact hierarchy: Act -> Chapters -> Sections OR Act -> Sections (if no chapters).
- * 3. Text Formatting:
- *    - Use '\n\n' for paragraph breaks.
- *    - Use Markdown for tables (e.g., | Col1 | Col2 |).
- *    - Preserve original numbering (e.g., "(1)", "(a)", "Explanation.—").
- * 4. Annotations:
- *    - If the text contains footnote markers (e.g., ¹, *, or [1]), keep them in the 'text'.
- *    - Extract the corresponding footnote text into the 'annotations' array.
- * 5. Explanations:
- *    - If the user provides a summary/explanation, put it in the 'explanation' field.
- *    - If the Act text has an "Explanation" clause inline, keep it in the 'text' field.
- * 
- * Below is the template structure to follow:
+ * 1.  **Output must be a valid TypeScript object of type 'Act'.**
+ * 2.  **Maintain the correct hierarchy based on the document type.** See the guide below.
+ * 3.  **Text Formatting:**
+ *     - Use '\n\n' for paragraph breaks.
+ *     - Use Markdown for tables (e.g., | Col1 | Col2 |).
+ *     - Preserve original numbering (e.g., "(1)", "(a)", "Explanation.—").
+ * 4.  **Footnotes:**
+ *     - If the text contains footnote markers (e.g., ¹, *, or [1]), keep them in the 'text' property.
+ *     - Extract the corresponding footnote text into the 'footnotes' array. Each footnote should have a 'fn_number' (matching the marker) and the 'text' of the footnote.
+ * 5.  **Explanations:**
+ *     - If the user provides a simplified summary/explanation, put it in the 'explanation' field.
+ *     - If the Act text has an "Explanation" clause inline, keep it within the 'text' property.
+ * 6.  **Special Content:**
+ *     - If the document has a "Preamble" or a "Statement of Objectives and Reasons", parse them into their respective objects.
+ *
+ * --- HIERARCHY AND CONTENT TYPE GUIDE ---
+ *
+ * Use the correct combination of content types based on the document being parsed.
+ *
+ * 1.  **Standard Act (e.g., Indian Penal Code):**
+ *     - Hierarchy: `Act` -> (`Preamble`) -> `chapters` -> `sections`
+ *
+ * 2.  **The Constitution of India:**
+ *     - Simple Hierarchy: `Act` -> (`Preamble`) -> `parts` -> `articles`.
+ *     - Complex Hierarchy: `Act` -> (`Preamble`) -> `parts` -> `chapters` -> `articles`.
+ *
+ * 3.  **Acts with Procedural Rules in Schedules (e.g., Code of Civil Procedure):**
+ *     - Hierarchy: `Act` -> `sections` AND `schedules` -> `rules`.
+ *
+ * 4.  **Standalone Rules/Regulations (e.g., SEBI Regulations):**
+ *     - Hierarchy: `Act` -> `chapters` -> `rules`.
+ *
+ * 5.  **Very Small Acts (with no chapters):**
+ *     - Hierarchy: `Act` -> `sections`.
+ *
+ * --- TEMPLATES ---
  */
 
 export const PARSED_ACT_TEMPLATE: Act = {
-  // exact name of the act including year
-  act_name: "The Example Act, 2024", 
+    act_name: "The Example Act, 2024",
 
-  // OPTION A: For acts divided into chapters
-  chapters: [
-    {
-      chapter_number: "I", // Roman (I, II) or Arabic (1, 2) as per original text
-      chapter_title: "Preliminary",
-      section_range: "1-2", // Optional: Range of sections in this chapter
-      sections: [
-        {
-          section_number: "1",
-          section_title: "Short title, extent and commencement",
-          // Note the use of \n\n for new lines between sub-sections
-          text: "(1) This Act may be called the Example Act, 2024.\n\n(2) It extends to the whole of India.\n\n(3) It shall come into force on such date¹ as the Central Government may notify.",
-          // Footnotes found in the page footer or endnotes
-          annotations: [
-            { 
-              id: "1", 
-              detail: "Notification No. S.O. 123(E), dated 1st January 2024." 
-            }
-          ],
-          // Simplified summary (optional)
-          explanation: "This section defines the name of the law and where it applies."
-        },
-        {
-          section_number: "2",
-          section_title: "Definitions",
-          text: "In this Act, unless the context otherwise requires,—\n(a) 'Public Servant' means any person falling under the description...\n(b) 'Government' means the Central Government."
-        }
-      ]
+    // --- TEMPLATE 0: Special Content (Optional) ---
+    preamble: {
+        title: "Preamble",
+        text: "An Act to consolidate and amend the law relating to... WHEREAS it is expedient to..."
     },
-    {
-      chapter_number: "II",
-      chapter_title: "Offences and Penalties",
-      section_range: "3-5",
-      sections: [
-        {
-          section_number: "3",
-          section_title: "Punishment for theft",
-          text: "Whoever commits theft shall be punished with imprisonment of either description for a term which may extend to three years, or with fine, or with both."
-        }
-      ]
-    }
-  ],
+    statement_of_objectives_and_reasons: {
+        title: "Statement of Objectives and Reasons",
+        text: "The bill seeks to achieve the following objectives..."
+    },
 
-  // OPTION B: For acts with Schedules (usually at the end)
-  schedules: [
-    {
-      schedule_number: "First Schedule",
-      schedule_title: "Classification of Offences",
-      sections: [
+    // --- TEMPLATE 1: Standard Act (e.g., Indian Penal Code) ---
+    chapters: [
         {
-          section_number: "1", // If schedule entries aren't numbered, use sequential ID
-          section_title: "Cognizable Offences",
-          // Use Markdown table format for tabular data
-          text: "| Offence | Punishment | Cognizable? |\n|---|---|---|\n| Theft | 3 Years | Yes |\n| Murder | Death/Life | Yes |"
+            chapter_number: "I",
+            chapter_title: "Preliminary",
+            sections: [
+                {
+                    section_number: "1",
+                    section_title: "Short title, extent and commencement",
+                    text: "(1) This Act may be called the Example Act, 2024.\n\n(2) It extends to the whole of India.\n\n(3) It shall come into force on such date¹ as the Central Government may notify.",
+                    footnotes: [{ fn_number: "1", text: "Came into force on 1st Jan 2024, see G.N. No. 123." }],
+                    explanation: "This section defines the name of the law, its geographical reach, and when it becomes effective."
+                }
+            ]
         }
-      ]
-    }
-  ]
+    ],
 
-  // OPTION C: For small acts with NO chapters (Do not use if 'chapters' is present)
-  /*
-  sections: [
-    {
-      section_number: "1",
-      section_title: "Short Title",
-      text: "This Act may be called the Small Act, 2024."
-    }
-  ]
-  */
+    // --- TEMPLATE 2A: The Constitution of India (Simple Part) ---
+    /*
+    parts: [
+        {
+            part_number: "I",
+            part_title: "THE UNION AND ITS TERRITORY",
+            articles: [
+                {
+                    article_number: "1",
+                    article_title: "Name and territory of the Union",
+                    text: "(1) India, that is Bharat, shall be a Union of States.\n\n(2) The States and the territories thereof shall be as specified in the First Schedule.¹",
+                    footnotes: [{
+                        fn_number: "1",
+                        text: "Substituted by the Constitution (Seventh Amendment) Act, 1956, s. 2."
+                    }]
+                }
+            ]
+        }
+    ],
+    */
+
+    // --- TEMPLATE 2B: The Constitution of India (Part with Chapters) ---
+    /*
+    parts: [
+        {
+            part_number: "V",
+            part_title: "THE UNION",
+            chapters: [
+                {
+                    chapter_number: "I",
+                    chapter_title: "THE EXECUTIVE",
+                    articles: [
+                        {
+                            article_number: "52",
+                            article_title: "The President of India",
+                            text: "There shall be a President of India."
+                        },
+                        {
+                            article_number: "53",
+                            article_title: "Executive power of the Union",
+                            text: "(1) The executive power of the Union shall be vested in the President..."
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+    */
 };

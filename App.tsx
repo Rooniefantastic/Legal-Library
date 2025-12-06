@@ -17,7 +17,8 @@ import {
   Copy, 
   Bookmark, 
   Type, 
-  Home
+  Home,
+  Footprints
 } from 'lucide-react';
 import { acts } from './data';
 import { flattenActSections } from './utils';
@@ -340,15 +341,16 @@ const SectionViewScreen: React.FC = () => {
     alert("Copied to clipboard!");
   };
 
-  // Text Formatter (Basic Markdown-ish handling for tables/newlines)
-  // Converting '¹' to accessible span is good practice but for now we render as is.
+  // Text Formatter with Footnote Handling
   const formatText = (text: string) => {
-    return text.split('\n\n').map((paragraph, idx) => {
-      // Very basic table detection
+    const footnoteRegex = /([¹²³⁴⁵⁶⁷⁸⁹]+)/g;
+    return text.split('\n\n').map((paragraph, pIdx) => {
+
+      // Basic table detection
       if (paragraph.includes('|')) {
          const rows = paragraph.split('\n').filter(r => r.trim() !== '');
          return (
-             <div key={idx} className="my-4 overflow-x-auto border border-gray-300 rounded-lg">
+             <div key={pIdx} className="my-4 overflow-x-auto border border-gray-300 rounded-lg">
                  <table className="min-w-full text-sm divide-y divide-gray-200">
                      <tbody className="bg-white divide-y divide-gray-200">
                      {rows.map((row, rIdx) => {
@@ -367,7 +369,25 @@ const SectionViewScreen: React.FC = () => {
              </div>
          )
       }
-      return <p key={idx} className="mb-4 leading-relaxed">{paragraph}</p>;
+
+      const parts = paragraph.split(footnoteRegex);
+      return (
+        <p key={pIdx} className="mb-4 leading-relaxed">
+          {parts.map((part, partIdx) => {
+            if (footnoteRegex.test(part)) {
+              return (
+                <sup 
+                  key={partIdx} 
+                  className="text-blue-600 font-bold"
+                >
+                  {part}
+                </sup>
+              );
+            }
+            return part;
+          })}
+        </p>
+      );
     });
   };
 
@@ -386,6 +406,7 @@ const SectionViewScreen: React.FC = () => {
         <button onClick={() => navigate(`/act/${actIndex}`)} className="p-2 hover:bg-gray-100 rounded-full">
           <ArrowLeft className="w-6 h-6 text-gray-700" />
         </button>
+        <span className="truncate max-w-[500px]">{act.act_name}</span>
         
         <div className="flex gap-1">
            <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className="p-2 hover:bg-gray-100 rounded-full">
@@ -424,10 +445,8 @@ const SectionViewScreen: React.FC = () => {
       {/* Content Area */}
       <main className="flex-1 overflow-y-auto p-5 pb-24">
         {/* Breadcrumbs */}
-        <div className="text-xs text-gray-500 mb-4 flex flex-wrap gap-1 items-center">
-            <span className="truncate max-w-[150px]">{act.act_name}</span>
-            <ChevronRight className="w-3 h-3" />
-            <span className="truncate max-w-[150px]">{chapterTitle}</span>
+        <div className="text-xs text-gray-1000 mb-4 flex flex-wrap gap-1 items-center">
+            <span className="truncate max-w-[250px]">{chapterTitle}</span>
         </div>
 
         {/* Title */}
@@ -446,32 +465,34 @@ const SectionViewScreen: React.FC = () => {
         </div>
 
         {/* Annotations / Explanations */}
-        {(section.annotations || section.explanation) && (
+        {section.annotations && section.annotations.length > 0 && (
+            <div className="mt-8 pt-6 border-t border-gray-200">
+                <h4 className="font-bold text-gray-800 mb-3 text-lg">Footnotes</h4>
+                <ul className="space-y-3 text-sm text-gray-700">
+                    {section.annotations.map(a => (
+                        <li key={a.id} className="leading-relaxed border-b border-gray-100 pb-2 last:border-0">
+                          <span className="font-bold text-blue-600 mr-2">[{a.id}]</span> 
+                          {a.detail}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        )}
+        
+        {section.explanation && (
             <div className="mt-8 pt-6 border-t border-gray-200 space-y-4">
-                {section.explanation && (
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                        <h4 className="text-sm font-bold text-blue-800 mb-1 flex items-center gap-2">
-                             INFO & EXPLANATION
-                        </h4>
-                        <p className="text-sm text-blue-900">{section.explanation}</p>
-                    </div>
-                )}
-                {section.annotations && section.annotations.length > 0 && (
-                     <div className="text-sm text-gray-600">
-                         <h4 className="font-bold text-gray-800 mb-2">Footnotes</h4>
-                         <ul className="list-decimal pl-5 space-y-1">
-                             {section.annotations.map(a => (
-                                 <li key={a.id}><span className="font-medium">[{a.id}]</span> {a.detail}</li>
-                             ))}
-                         </ul>
-                     </div>
-                )}
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                    <h4 className="text-sm font-bold text-blue-800 mb-1 flex items-center gap-2">
+                         EXPLANATION
+                    </h4>
+                    <p className="text-sm text-blue-900">{section.explanation}</p>
+                </div>
             </div>
         )}
       </main>
 
       {/* Footer Navigation */}
-      <div className="absolute bottom-0 w-full bg-white border-t border-gray-200 p-3 flex justify-between items-center safe-area-pb">
+      <div className="absolute bottom-0 w-full bg-white/80 backdrop-blur-sm border-t border-gray-200 p-3 flex justify-between items-center safe-area-pb">
          <button 
            onClick={handlePrev} 
            disabled={currentIndex === 0}
