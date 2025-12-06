@@ -266,6 +266,120 @@ const HomeScreen: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Bottom Navigation */}
+      <nav className="absolute bottom-0 w-full bg-white border-t border-gray-200 flex justify-around items-center p-3 safe-area-pb">
+        <Link
+          to="/"
+          className="flex flex-col items-center gap-1 text-blue-600 hover:text-blue-700"
+        >
+          <Home className="w-6 h-6" />
+          <span className="text-xs font-medium">Home</span>
+        </Link>
+        <Link
+          to="/bookmarks"
+          className="flex flex-col items-center gap-1 text-gray-600 hover:text-gray-700"
+        >
+          <Bookmark className="w-6 h-6" />
+          <span className="text-xs font-medium">Bookmarks</span>
+        </Link>
+      </nav>
+    </div>
+  );
+};
+
+// 1.5 Bookmarks Screen
+const BookmarksScreen: React.FC = () => {
+  const navigate = useNavigate();
+  const [bookmarks, setBookmarks] = useState<BookmarkRecord[]>(loadBookmarks());
+
+  const removeBookmarkItem = (actIndex: number, sectionNumber: string) => {
+    removeBookmark(actIndex, sectionNumber);
+    setBookmarks(loadBookmarks());
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-gray-50">
+      <header className="bg-white border-b border-gray-200 p-3 sticky top-0 z-10 flex items-center gap-3 shadow-sm">
+        <button onClick={() => navigate('/')} className="p-2 hover:bg-gray-100 rounded-full">
+          <ArrowLeft className="w-6 h-6 text-gray-700" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <h1 className="font-bold text-gray-900 truncate">Bookmarks</h1>
+          <p className="text-xs text-gray-500">{bookmarks.length} saved</p>
+        </div>
+      </header>
+
+      <main className="flex-1 overflow-y-auto p-4 pb-24">
+        {bookmarks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <Bookmark className="w-12 h-12 text-gray-300 mb-3" />
+            <p className="text-gray-500 font-medium">No bookmarks yet</p>
+            <p className="text-xs text-gray-400 mt-1">Start bookmarking sections to save them here</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {bookmarks
+              .sort((a, b) => b.timestamp - a.timestamp)
+              .map((bookmark, idx) => {
+                const act = acts[bookmark.actIndex];
+                if (!act) return null;
+
+                const flat = flattenActSections(act, bookmark.actIndex);
+                const section = flat.find(s => s.section.section_number === bookmark.sectionNumber)?.section;
+
+                if (!section) return null;
+
+                return (
+                  <div
+                    key={`${bookmark.actIndex}-${bookmark.sectionNumber}-${idx}`}
+                    className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm"
+                  >
+                    <Link
+                      to={`/act/${bookmark.actIndex}/section/${encodeURIComponent(section.section_number)}`}
+                      className="block mb-2"
+                    >
+                      <div className="text-xs text-blue-600 font-medium mb-1">{act.act_name}</div>
+                      <div className="font-semibold text-gray-800 hover:text-blue-600 transition-colors">
+                        Section {section.section_number}
+                        {section.section_title && ` - ${section.section_title}`}
+                      </div>
+                    </Link>
+                    <div className="flex justify-between items-center mt-2">
+                      <p className="text-xs text-gray-500">
+                        {new Date(bookmark.timestamp).toLocaleDateString()}
+                      </p>
+                      <button
+                        onClick={() => removeBookmarkItem(bookmark.actIndex, bookmark.sectionNumber)}
+                        className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded hover:bg-red-100 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav className="absolute bottom-0 w-full bg-white border-t border-gray-200 flex justify-around items-center p-3 safe-area-pb">
+        <Link
+          to="/"
+          className="flex flex-col items-center gap-1 text-gray-600 hover:text-gray-700"
+        >
+          <Home className="w-6 h-6" />
+          <span className="text-xs font-medium">Home</span>
+        </Link>
+        <Link
+          to="/bookmarks"
+          className="flex flex-col items-center gap-1 text-blue-600 hover:text-blue-700"
+        >
+          <Bookmark className="w-6 h-6" />
+          <span className="text-xs font-medium">Bookmarks</span>
+        </Link>
+      </nav>
     </div>
   );
 };
@@ -712,6 +826,7 @@ const App: React.FC = () => {
     <HashRouter>
       <Routes>
         <Route path="/" element={<HomeScreen />} />
+        <Route path="/bookmarks" element={<BookmarksScreen />} />
         <Route path="/act/:actId" element={<ActDetailScreen />} />
         <Route path="/act/:actId/section/:sectionNum" element={<SectionViewScreen />} />
       </Routes>
