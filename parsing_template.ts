@@ -33,7 +33,7 @@ import { Act } from './types';
  *     - Complex Hierarchy: `Act` -> (`Preamble`) -> `parts` -> `chapters` -> `articles`.
  *
  * 3.  **Acts with Procedural Rules in Schedules (e.g., Code of Civil Procedure):**
- *     - Hierarchy: `Act` -> `sections` AND `schedules` -> `rules`.
+ *     - Hierarchy: `Act` -> `sections` AND `schedules` -> `rules` (schedules contain only `rules`).
  *
  * 4.  **Standalone Rules/Regulations (e.g., SEBI Regulations):**
  *     - Hierarchy: `Act` -> `chapters` -> `rules`.

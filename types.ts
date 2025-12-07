@@ -65,7 +65,6 @@ export interface Part {
 export interface Schedule {
   schedule_number?: string;
   schedule_title?: string;
-  sections?: Section[];
   rules?: Rule[];
 }
 
