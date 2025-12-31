@@ -1,4 +1,4 @@
-import { Act } from './types';
+import { Act } from '../types';
 
 
 export const PARSED_ACT_TEMPLATE: Act = {
