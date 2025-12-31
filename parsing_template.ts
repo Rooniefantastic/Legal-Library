@@ -1,48 +1,5 @@
 import { Act } from './types';
 
-/**
- * --- INSTRUCTIONS FOR AI PARSER ---
- *
- * Objective: Convert raw legal text (from PDF/OCR) into the structured TypeScript format defined below.
- *
- * Rules:
- * 1.  **Output must be a valid TypeScript object of type 'Act'.**
- * 2.  **Maintain the correct hierarchy based on the document type.** See the guide below.
- * 3.  **Text Formatting:**
- *     - Use '\n\n' for paragraph breaks.
- *     - Use Markdown for tables (e.g., | Col1 | Col2 |).
- *     - Preserve original numbering (e.g., "(1)", "(a)", "Explanation.—").
- * 4.  **Footnotes:**
- *     - If the text contains footnote markers (e.g., ¹, *, or [1]), keep them in the 'text' property.
- *     - Extract the corresponding footnote text into the 'footnotes' array. Each footnote should have a 'fn_number' (matching the marker) and the 'text' of the footnote.
- * 5.  **Explanations:**
- *     - If the user provides a simplified summary/explanation, put it in the 'explanation' field.
- *     - If the Act text has an "Explanation" clause inline, keep it within the 'text' property.
- * 6.  **Special Content:**
- *     - If the document has a "Preamble" or a "Statement of Objectives and Reasons", parse them into their respective objects.
- *
- * --- HIERARCHY AND CONTENT TYPE GUIDE ---
- *
- * Use the correct combination of content types based on the document being parsed.
- *
- * 1.  **Standard Act (e.g., Indian Penal Code):**
- *     - Hierarchy: `Act` -> (`Preamble`) -> `chapters` -> `sections`
- *
- * 2.  **The Constitution of India:**
- *     - Simple Hierarchy: `Act` -> (`Preamble`) -> `parts` -> `articles`.
- *     - Complex Hierarchy: `Act` -> (`Preamble`) -> `parts` -> `chapters` -> `articles`.
- *
- * 3.  **Acts with Procedural Rules in Schedules (e.g., Code of Civil Procedure):**
- *     - Hierarchy: `Act` -> `sections` AND `schedules` -> `rules` (schedules contain only `rules`).
- *
- * 4.  **Standalone Rules/Regulations (e.g., SEBI Regulations):**
- *     - Hierarchy: `Act` -> `chapters` -> `rules`.
- *
- * 5.  **Very Small Acts (with no chapters):**
- *     - Hierarchy: `Act` -> `sections`.
- *
- * --- TEMPLATES ---
- */
 
 export const PARSED_ACT_TEMPLATE: Act = {
     act_name: "The Example Act, 2024",
